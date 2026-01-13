@@ -18,25 +18,25 @@
         }
 
         /* LOGO STYLES */
-        #logoContainer {
-            text-align: center;
-            margin-top: 10px; margin-bottom: 25px; 
-        }
-        #mainLogo {
-            max-width: 200px; 
-            max-height: 120px;
-            height: auto; 
-            display: inline-block;
-        }
+        #logoContainer { text-align: center; margin-top: 10px; margin-bottom: 25px; }
+        #mainLogo { max-width: 200px; max-height: 120px; height: auto; display: inline-block; }
 
-        /* LOGIN SPECIFIC */
+        /* INPUT FIELDS */
         .login-input {
             padding: 12px; font-size: 16px; width: 80%; text-align: center; 
             margin-bottom: 10px; border: 2px solid #ddd; border-radius: 6px;
             display: block; margin-left: auto; margin-right: auto;
         }
-        
-        /* APP STYLES (Initially Hidden) */
+
+        /* NEW SEARCH BOX STYLE */
+        #searchInput {
+            width: 100%; padding: 12px; font-size: 16px; margin-bottom: 20px;
+            border: 2px solid #007bff; border-radius: 8px; box-sizing: border-box;
+            outline: none; transition: box-shadow 0.2s;
+        }
+        #searchInput:focus { box-shadow: 0 0 8px rgba(0,123,255,0.3); }
+
+        /* APP STYLES */
         #appContainer { display: none; max-width: 600px; margin: 0 auto; }
         
         select { 
@@ -49,8 +49,7 @@
             cursor: pointer; font-weight: bold; transition: background 0.2s; margin-top: 10px;
         }
         button:hover { background-color: #0056b3; }
-        button:disabled { background-color: #ccc; cursor: not-allowed; }
-
+        
         /* LIST STYLES */
         h1 { text-align: center; color: #333; margin-bottom: 20px; font-size: 24px; }
         #customerList { list-style: none; padding: 0; margin: 0 auto; }
@@ -94,10 +93,16 @@
         <div id="logoContainer">
             <img id="mainLogo" src="logo.jpeg" alt="Company Logo" onerror="fallbackLogo(this)">
         </div>
+
         <h1 id="pageTitle">Select Area</h1>
-        <p style="text-align:center; color:#666; font-size: 0.9em;">Logged in as: <strong id="currentUserDisplay">User</strong></p>
+        <p style="text-align:center; color:#666; font-size: 0.9em; margin-bottom: 20px;">
+            Logged in as: <strong id="currentUserDisplay">User</strong>
+        </p>
         
+        <input type="text" id="searchInput" onkeyup="filterList()" placeholder="🔍 Search customer name..." class="hidden">
+
         <button id="changeAreaBtn" class="change-btn hidden" onclick="showModal()">Change Area</button>
+        
         <ul id="customerList"></ul>
     </div>
 
@@ -118,11 +123,11 @@
         let logoAttempts = 0;
         function fallbackLogo(img) {
             logoAttempts++;
-            if (logoAttempts === 1) img.src = 'logo.jpg';        // Try simple jpg
-            else if (logoAttempts === 2) img.src = 'logo.png';   // Try png
-            else if (logoAttempts === 3) img.src = 'Logo.jpeg';  // Try Capital L
-            else if (logoAttempts === 4) img.src = 'Logo.jpg';   // Try Capital L jpg
-            else img.style.display = 'none';                     // Give up, hide image
+            if (logoAttempts === 1) img.src = 'logo.jpg';
+            else if (logoAttempts === 2) img.src = 'logo.png';
+            else if (logoAttempts === 3) img.src = 'Logo.jpeg';
+            else if (logoAttempts === 4) img.src = 'Logo.jpg';
+            else img.style.display = 'none';
         }
 
         // ==========================================
@@ -132,7 +137,8 @@
            "pradip": "8467",
            "harshad": "8415",
            "prajwal": "3272",
-           "kiran": "6710"
+           "kiran": "6710",
+           "admin": "1234"
         };
         // ==========================================
 
@@ -158,6 +164,24 @@
         document.getElementById('passInput').addEventListener("keypress", function(event) {
             if (event.key === "Enter") checkLogin();
         });
+
+        // --- NEW SEARCH FUNCTION ---
+        function filterList() {
+            const input = document.getElementById('searchInput');
+            const filter = input.value.toLowerCase();
+            const ul = document.getElementById('customerList');
+            const li = ul.getElementsByTagName('li');
+
+            for (let i = 0; i < li.length; i++) {
+                const nameSpan = li[i].getElementsByClassName('name')[0];
+                const txtValue = nameSpan.textContent || nameSpan.innerText;
+                if (txtValue.toLowerCase().indexOf(filter) > -1) {
+                    li[i].style.display = "";
+                } else {
+                    li[i].style.display = "none";
+                }
+            }
+        }
 
         // --- Google Sheets Logic ---
         window.loadGoogleData = function(json) {
@@ -237,6 +261,10 @@
             document.getElementById('pageTitle').innerText = selectedArea;
             document.getElementById('areaModal').classList.add('hidden');
             document.getElementById('changeAreaBtn').classList.remove('hidden');
+            
+            // Show the search input now that we have a list
+            document.getElementById('searchInput').classList.remove('hidden');
+            document.getElementById('searchInput').value = ''; // Clear search on new area load
         }
 
         function showModal() {
