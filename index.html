@@ -92,7 +92,7 @@
     <div id="appContainer">
         
         <div id="logoContainer">
-            <img id="mainLogo" src="logo.jpeg" alt="Company Logo" onerror="this.style.display='none'">
+            <img id="mainLogo" src="logo.jpeg" alt="Company Logo" onerror="fallbackLogo(this)">
         </div>
         <h1 id="pageTitle">Select Area</h1>
         <p style="text-align:center; color:#666; font-size: 0.9em;">Logged in as: <strong id="currentUserDisplay">User</strong></p>
@@ -114,6 +114,17 @@
     </div>
 
     <script>
+        // --- SMART LOGO LOGIC ---
+        let logoAttempts = 0;
+        function fallbackLogo(img) {
+            logoAttempts++;
+            if (logoAttempts === 1) img.src = 'logo.jpg';        // Try simple jpg
+            else if (logoAttempts === 2) img.src = 'logo.png';   // Try png
+            else if (logoAttempts === 3) img.src = 'Logo.jpeg';  // Try Capital L
+            else if (logoAttempts === 4) img.src = 'Logo.jpg';   // Try Capital L jpg
+            else img.style.display = 'none';                     // Give up, hide image
+        }
+
         // ==========================================
         // 👥 USERS LIST
         const USERS = {
@@ -128,7 +139,6 @@
         let allData = [];
 
         function checkLogin() {
-            // Case-insensitive check for username, exact match for password
             const userIn = document.getElementById('userInput').value.trim().toLowerCase();
             const passIn = document.getElementById('passInput').value;
             const errorMsg = document.getElementById('loginError');
@@ -136,7 +146,6 @@
             if (USERS[userIn] && USERS[userIn] === passIn) {
                 document.getElementById('passwordModal').style.display = 'none';
                 document.getElementById('appContainer').style.display = 'block';
-                // Capitalize first letter for display
                 document.getElementById('currentUserDisplay').innerText = userIn.charAt(0).toUpperCase() + userIn.slice(1);
                 document.getElementById('areaModal').classList.remove('hidden');
                 loadGoogleScript();
