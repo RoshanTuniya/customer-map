@@ -148,5 +148,127 @@
 
         // --- LOGIN ---
         function checkLogin() {
+            // Trim spaces from BOTH username and password
             const userIn = document.getElementById('userInput').value.trim().toLowerCase();
-            const passIn = document.getElementById
+            const passIn = document.getElementById('passInput').value.trim();
+            const errorMsg = document.getElementById('loginError');
+
+            if (USERS[userIn] && USERS[userIn] === passIn) {
+                document.getElementById('passwordModal').style.display = 'none';
+                document.getElementById('appContainer').style.display = 'block';
+                document.getElementById('currentUserDisplay').innerText = userIn.charAt(0).toUpperCase() + userIn.slice(1);
+                document.getElementById('areaModal').classList.remove('hidden');
+                loadGoogleScript();
+            } else {
+                errorMsg.style.display = 'block';
+                errorMsg.innerText = "Incorrect Password or Username";
+                // Add shake animation or alert for mobile users
+                alert("Login Failed: Please check your username and password.");
+                document.getElementById('passInput').value = '';
+            }
+        }
+        
+        document.getElementById('passInput').addEventListener("keypress", (e) => { if (e.key === "Enter") checkLogin(); });
+
+        // --- SEARCH LOGIC (Restricted to Area) ---
+        function handleSearch() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            
+            // Filter strictly by the current Area AND the name query
+            const filtered = allData
+                .filter(item => item.Area === currentArea && item.Name.toLowerCase().includes(query))
+                .sort((a, b) => a.SrNo - b.SrNo);
+            
+            renderList(filtered);
+        }
+
+        // --- AREA SELECTION ---
+        function selectAreaAndClose() {
+            const selected = document.getElementById('areaSelect').value;
+            if (!selected) return;
+
+            currentArea = selected;
+            
+            // Show UI elements
+            document.getElementById('searchInput').value = ''; // Clear old search
+            document.getElementById('searchContainer').classList.remove('hidden'); // Show search box
+            document.getElementById('changeAreaBtn').classList.remove('hidden'); // Show change button
+            document.getElementById('areaModal').classList.add('hidden'); // Hide modal
+            
+            document.getElementById('pageTitle').innerText = currentArea;
+            
+            // Initial render of all customers in this area
+            const filtered = allData
+                .filter(d => d.Area === currentArea)
+                .sort((a, b) => a.SrNo - b.SrNo);
+            
+            renderList(filtered);
+        }
+
+        function renderList(data) {
+            const list = document.getElementById('customerList');
+            list.innerHTML = '';
+
+            if(data.length === 0) {
+                list.innerHTML = '<p style="text-align:center; color:#888;">No matching customers found.</p>';
+                return;
+            }
+
+            data.forEach(cust => {
+                const li = document.createElement('li');
+                li.className = 'customer-card';
+                li.onclick = () => { if(cust.Link) window.open(cust.Link, '_blank'); };
+                
+                li.innerHTML = `
+                    <span class="sr-no-badge">#${cust.SrNo}</span>
+                    <span class="name">${cust.Name}</span>
+                    <span class="map-icon">📍</span>
+                `;
+                list.appendChild(li);
+            });
+        }
+
+        function showModal() {
+            document.getElementById('areaModal').classList.remove('hidden');
+        }
+
+        // --- GOOGLE DATA ---
+        window.loadGoogleData = function(json) {
+            const rows = json.table.rows;
+            if (!rows || rows.length === 0) return;
+
+            allData = rows.map(row => {
+                const area = row.c[0] ? row.c[0].v : "";
+                const srNo = row.c[1] ? row.c[1].v : "0";
+                const name = row.c[2] ? row.c[2].v : "";
+                let link = row.c[3] ? row.c[3].v : "";
+
+                if (link && !link.toString().startsWith('http')) link = 'https://' + link;
+
+                return { Area: area, SrNo: parseInt(srNo), Name: name, Link: link };
+            }).filter(item => item.Area && item.Name && item.Area !== "Area");
+
+            const areas = [...new Set(allData.map(d => d.Area))].sort();
+            const select = document.getElementById('areaSelect');
+            select.innerHTML = '<option value="" disabled selected>Choose Area</option>';
+            areas.forEach(area => {
+                const opt = document.createElement('option');
+                opt.value = area;
+                opt.textContent = area;
+                select.appendChild(opt);
+            });
+
+            select.disabled = false;
+            document.getElementById('showBtn').disabled = false;
+            document.getElementById('statusMsg').textContent = "Data loaded! Select an area.";
+        };
+
+        function loadGoogleScript() {
+            const sheetId = '1ERYBto9SA_h1p6Yv2adpBv3r1Cr7kphm1NnevIJY0wQ'; 
+            const script = document.createElement('script');
+            script.src = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=responseHandler:loadGoogleData`;
+            document.body.appendChild(script);
+        }
+    </script>
+</body>
+</html>
