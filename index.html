@@ -21,23 +21,25 @@
         #logoContainer { text-align: center; margin-top: 10px; margin-bottom: 25px; }
         #mainLogo { max-width: 200px; max-height: 120px; height: auto; display: inline-block; }
 
-        /* INPUT FIELDS */
+        /* INPUTS */
         .login-input {
             padding: 12px; font-size: 16px; width: 80%; text-align: center; 
             margin-bottom: 10px; border: 2px solid #ddd; border-radius: 6px;
             display: block; margin-left: auto; margin-right: auto;
         }
 
-        /* NEW SEARCH BOX STYLE */
+        /* SEARCH BOX (Hidden initially) */
+        #searchContainer { max-width: 600px; margin: 0 auto 20px auto; }
         #searchInput {
-            width: 100%; padding: 12px; font-size: 16px; margin-bottom: 20px;
-            border: 2px solid #007bff; border-radius: 8px; box-sizing: border-box;
+            width: 100%; padding: 15px; font-size: 16px; 
+            border: 2px solid #007bff; border-radius: 30px; box-sizing: border-box;
             outline: none; transition: box-shadow 0.2s;
+            text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
         }
-        #searchInput:focus { box-shadow: 0 0 8px rgba(0,123,255,0.3); }
+        #searchInput:focus { box-shadow: 0 4px 12px rgba(0,123,255,0.2); }
 
-        /* APP STYLES */
-        #appContainer { display: none; max-width: 600px; margin: 0 auto; }
+        /* APP LAYOUT */
+        #appContainer { display: none; }
         
         select { 
             padding: 12px; font-size: 16px; margin-top: 15px; width: 100%; 
@@ -50,26 +52,26 @@
         }
         button:hover { background-color: #0056b3; }
         
-        /* LIST STYLES */
-        h1 { text-align: center; color: #333; margin-bottom: 20px; font-size: 24px; }
-        #customerList { list-style: none; padding: 0; margin: 0 auto; }
+        /* CUSTOMER LIST */
+        h1 { text-align: center; color: #333; margin-bottom: 10px; font-size: 24px; }
+        #customerList { list-style: none; padding: 0; max-width: 600px; margin: 0 auto; }
         .customer-card {
-            background: white; margin-bottom: 12px; padding: 20px; border-radius: 10px;
+            background: white; margin-bottom: 12px; padding: 15px 20px; border-radius: 10px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center;
             cursor: pointer; border-left: 6px solid #007bff; transition: transform 0.2s;
         }
         .customer-card:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); background-color: #f9fcff; }
         
         .sr-no-badge { 
-            background: #e9ecef; color: #495057; padding: 6px 12px; border-radius: 20px; 
-            font-size: 0.9em; font-weight: bold; margin-right: 15px; min-width: 30px; text-align: center;
+            background: #e9ecef; color: #495057; padding: 5px 10px; border-radius: 15px; 
+            font-size: 0.85em; font-weight: bold; margin-right: 15px; min-width: 30px; text-align: center;
         }
-        .name { flex-grow: 1; font-size: 18px; color: #212529; font-weight: 600; }
-        .map-icon { font-size: 22px; }
+        .name { font-size: 18px; color: #212529; font-weight: 600; }
+        .map-icon { font-size: 22px; margin-left: 10px; }
 
         .hidden { display: none !important; }
         .change-btn {
-            display: block; margin: 0 auto 20px auto; background: #6c757d; width: auto; padding: 8px 16px;
+            display: block; max-width: 200px; margin: 0 auto 20px auto; background: #6c757d; 
         }
     </style>
 </head>
@@ -79,10 +81,8 @@
         <div class="modal-content">
             <h2>🔒 Login</h2>
             <p style="margin-bottom: 20px; color: #666;">Enter your credentials</p>
-            
             <input type="text" id="userInput" class="login-input" placeholder="Username">
             <input type="password" id="passInput" class="login-input" placeholder="Password">
-            
             <button onclick="checkLogin()">Login</button>
             <p id="loginError" style="color: red; display: none; margin-top: 15px;">Invalid Username or Password</p>
         </div>
@@ -95,14 +95,15 @@
         </div>
 
         <h1 id="pageTitle">Select Area</h1>
-        <p style="text-align:center; color:#666; font-size: 0.9em; margin-bottom: 20px;">
+        <p style="text-align:center; color:#666; font-size: 0.9em; margin-bottom: 15px;">
             Logged in as: <strong id="currentUserDisplay">User</strong>
         </p>
         
-        <input type="text" id="searchInput" onkeyup="filterList()" placeholder="🔍 Search customer name..." class="hidden">
+        <div id="searchContainer" class="hidden">
+            <input type="text" id="searchInput" onkeyup="handleSearch()" placeholder="🔍 Search in this area...">
+        </div>
 
         <button id="changeAreaBtn" class="change-btn hidden" onclick="showModal()">Change Area</button>
-        
         <ul id="customerList"></ul>
     </div>
 
@@ -114,7 +115,7 @@
                 <option value="">Please wait...</option>
             </select>
             <br><br>
-            <button id="showBtn" onclick="displayCustomers()" disabled>Show Customers</button>
+            <button id="showBtn" onclick="selectAreaAndClose()" disabled>Show Customers</button>
         </div>
     </div>
 
@@ -143,142 +144,9 @@
         // ==========================================
 
         let allData = [];
+        let currentArea = ""; 
 
+        // --- LOGIN ---
         function checkLogin() {
             const userIn = document.getElementById('userInput').value.trim().toLowerCase();
-            const passIn = document.getElementById('passInput').value;
-            const errorMsg = document.getElementById('loginError');
-
-            if (USERS[userIn] && USERS[userIn] === passIn) {
-                document.getElementById('passwordModal').style.display = 'none';
-                document.getElementById('appContainer').style.display = 'block';
-                document.getElementById('currentUserDisplay').innerText = userIn.charAt(0).toUpperCase() + userIn.slice(1);
-                document.getElementById('areaModal').classList.remove('hidden');
-                loadGoogleScript();
-            } else {
-                errorMsg.style.display = 'block';
-                document.getElementById('passInput').value = '';
-            }
-        }
-        
-        document.getElementById('passInput').addEventListener("keypress", function(event) {
-            if (event.key === "Enter") checkLogin();
-        });
-
-        // --- NEW SEARCH FUNCTION ---
-        function filterList() {
-            const input = document.getElementById('searchInput');
-            const filter = input.value.toLowerCase();
-            const ul = document.getElementById('customerList');
-            const li = ul.getElementsByTagName('li');
-
-            for (let i = 0; i < li.length; i++) {
-                const nameSpan = li[i].getElementsByClassName('name')[0];
-                const txtValue = nameSpan.textContent || nameSpan.innerText;
-                if (txtValue.toLowerCase().indexOf(filter) > -1) {
-                    li[i].style.display = "";
-                } else {
-                    li[i].style.display = "none";
-                }
-            }
-        }
-
-        // --- Google Sheets Logic ---
-        window.loadGoogleData = function(json) {
-            const rows = json.table.rows;
-            if (!rows || rows.length === 0) {
-                document.getElementById('statusMsg').innerText = "Sheet is empty.";
-                return;
-            }
-
-            allData = rows.map(row => {
-                const area = row.c[0] ? row.c[0].v : "";
-                const srNo = row.c[1] ? row.c[1].v : "";
-                const name = row.c[2] ? row.c[2].v : "";
-                let link = row.c[3] ? row.c[3].v : "";
-
-                if (link && !link.toString().startsWith('http')) {
-                    link = 'https://' + link;
-                }
-
-                return { Area: area, SrNo: srNo, Name: name, Link: link };
-            }).filter(item => item.Area && item.Name && item.Area !== "Area");
-
-            populateDropdown();
-        };
-
-        function populateDropdown() {
-            const areas = [...new Set(allData.map(d => d.Area))].sort();
-            const select = document.getElementById('areaSelect');
-            const btn = document.getElementById('showBtn');
-            const msg = document.getElementById('statusMsg');
-
-            select.innerHTML = '<option value="" disabled selected>Choose Area</option>';
-            areas.forEach(area => {
-                const opt = document.createElement('option');
-                opt.value = area;
-                opt.textContent = area;
-                select.appendChild(opt);
-            });
-
-            select.disabled = false;
-            btn.disabled = false;
-            msg.textContent = "Data loaded successfully!";
-        }
-
-        function displayCustomers() {
-            const selectedArea = document.getElementById('areaSelect').value;
-            if (!selectedArea) return;
-
-            const list = document.getElementById('customerList');
-            list.innerHTML = '';
-
-            const filtered = allData
-                .filter(d => d.Area === selectedArea)
-                .sort((a, b) => parseInt(a.SrNo) - parseInt(b.SrNo));
-
-            if(filtered.length === 0) {
-                list.innerHTML = '<p style="text-align:center">No customers found.</p>';
-                return;
-            }
-
-            filtered.forEach(cust => {
-                const li = document.createElement('li');
-                li.className = 'customer-card';
-                li.onclick = () => {
-                    if(cust.Link) window.open(cust.Link, '_blank');
-                    else alert('No link available');
-                };
-                
-                li.innerHTML = `
-                    <span class="sr-no-badge">#${cust.SrNo}</span>
-                    <span class="name">${cust.Name}</span>
-                    <span class="map-icon">📍</span>
-                `;
-                list.appendChild(li);
-            });
-
-            document.getElementById('pageTitle').innerText = selectedArea;
-            document.getElementById('areaModal').classList.add('hidden');
-            document.getElementById('changeAreaBtn').classList.remove('hidden');
-            
-            // Show the search input now that we have a list
-            document.getElementById('searchInput').classList.remove('hidden');
-            document.getElementById('searchInput').value = ''; // Clear search on new area load
-        }
-
-        function showModal() {
-            document.getElementById('areaModal').classList.remove('hidden');
-        }
-
-        // --- Inject Script ---
-        function loadGoogleScript() {
-            const sheetId = '1ERYBto9SA_h1p6Yv2adpBv3r1Cr7kphm1NnevIJY0wQ'; 
-            const script = document.createElement('script');
-            script.src = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=responseHandler:loadGoogleData`;
-            document.body.appendChild(script);
-        }
-
-    </script>
-</body>
-</html>
+            const passIn = document.getElementById
