@@ -7,30 +7,41 @@
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background-color: #f0f2f5; }
         
-        /* Modal Styles */
-        #areaModal {
+        /* GENERAL MODAL STYLES */
+        .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; z-index: 1000;
+            background: rgba(0,0,0,0.9); display: flex; justify-content: center; align-items: center; z-index: 2000;
         }
         .modal-content {
             background: white; padding: 40px; border-radius: 12px; text-align: center;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 90%; max-width: 400px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 90%; max-width: 350px;
         }
+
+        /* LOGIN SPECIFIC */
+        .login-input {
+            padding: 12px; font-size: 16px; width: 80%; text-align: center; 
+            margin-bottom: 10px; border: 2px solid #ddd; border-radius: 6px;
+            display: block; margin-left: auto; margin-right: auto;
+        }
+        
+        /* APP STYLES (Initially Hidden) */
+        #appContainer { display: none; max-width: 600px; margin: 0 auto; }
+        
         select { 
             padding: 12px; font-size: 16px; margin-top: 15px; width: 100%; 
             border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box;
         }
         button {
-            margin-top: 20px; padding: 12px 24px; font-size: 16px; width: 100%;
+            padding: 12px 24px; font-size: 16px; width: 100%;
             background-color: #007bff; color: white; border: none; border-radius: 6px; 
-            cursor: pointer; font-weight: bold; transition: background 0.2s;
+            cursor: pointer; font-weight: bold; transition: background 0.2s; margin-top: 10px;
         }
         button:hover { background-color: #0056b3; }
         button:disabled { background-color: #ccc; cursor: not-allowed; }
 
-        /* List Styles */
+        /* LIST STYLES */
         h1 { text-align: center; color: #333; margin-bottom: 20px; font-size: 24px; }
-        #customerList { list-style: none; padding: 0; max-width: 600px; margin: 0 auto; }
+        #customerList { list-style: none; padding: 0; margin: 0 auto; }
         .customer-card {
             background: white; margin-bottom: 12px; padding: 20px; border-radius: 10px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center;
@@ -53,27 +64,85 @@
 </head>
 <body>
 
-    <h1 id="pageTitle">Select Area</h1>
-    <button id="changeAreaBtn" class="change-btn hidden" onclick="showModal()">Change Area</button>
+    <div id="passwordModal" class="modal-overlay">
+        <div class="modal-content">
+            <h2>🔒 Login</h2>
+            <p style="margin-bottom: 20px; color: #666;">Enter your credentials to continue</p>
+            
+            <input type="text" id="userInput" class="login-input" placeholder="Username">
+            <input type="password" id="passInput" class="login-input" placeholder="Password">
+            
+            <button onclick="checkLogin()">Login</button>
+            <p id="loginError" style="color: red; display: none; margin-top: 15px;">Invalid Username or Password</p>
+        </div>
+    </div>
 
-    <ul id="customerList"></ul>
+    <div id="appContainer">
+        <h1 id="pageTitle">Select Area</h1>
+        <p style="text-align:center; color:#666; font-size: 0.9em;">Logged in as: <strong id="currentUserDisplay">User</strong></p>
+        
+        <button id="changeAreaBtn" class="change-btn hidden" onclick="showModal()">Change Area</button>
+        <ul id="customerList"></ul>
+    </div>
 
-    <div id="areaModal">
+    <div id="areaModal" class="modal-overlay hidden">
         <div class="modal-content">
             <h2>Select Area</h2>
             <p id="statusMsg" style="color: #666; font-size: 0.9em;">Loading data...</p>
             <select id="areaSelect" disabled>
                 <option value="">Please wait...</option>
             </select>
-            <br>
+            <br><br>
             <button id="showBtn" onclick="displayCustomers()" disabled>Show Customers</button>
         </div>
     </div>
 
     <script>
+        // ==========================================
+        // 👥 ADD/REMOVE USERS HERE
+        // Format: "username": "password"
+        const USERS = {
+            "roshan": "4345",
+            "pradip": "8467",
+            "harshad": "8415",
+            "prajwal": "3272",
+            "kiran": "6710"
+        };
+        // ==========================================
+
         let allData = [];
 
-        // 1. Define the Callback Function (This runs when Google responds)
+        // --- 1. Login Logic ---
+        function checkLogin() {
+            const userIn = document.getElementById('userInput').value.trim(); // Case sensitive
+            const passIn = document.getElementById('passInput').value;
+            const errorMsg = document.getElementById('loginError');
+
+            // Check if user exists AND password matches
+            if (USERS[userIn] && USERS[userIn] === passIn) {
+                // Success
+                document.getElementById('passwordModal').style.display = 'none';
+                document.getElementById('appContainer').style.display = 'block';
+                document.getElementById('currentUserDisplay').innerText = userIn; // Show username
+                
+                // Show area selector
+                document.getElementById('areaModal').classList.remove('hidden');
+                
+                // Load data
+                loadGoogleScript();
+            } else {
+                // Fail
+                errorMsg.style.display = 'block';
+                document.getElementById('passInput').value = '';
+            }
+        }
+        
+        // Allow "Enter" key on password field to login
+        document.getElementById('passInput').addEventListener("keypress", function(event) {
+            if (event.key === "Enter") checkLogin();
+        });
+
+        // --- 2. Google Sheets Logic ---
         window.loadGoogleData = function(json) {
             const rows = json.table.rows;
             if (!rows || rows.length === 0) {
@@ -81,25 +150,22 @@
                 return;
             }
 
-            // Map data safely (Area, SrNo, Name, Link)
             allData = rows.map(row => {
                 const area = row.c[0] ? row.c[0].v : "";
                 const srNo = row.c[1] ? row.c[1].v : "";
                 const name = row.c[2] ? row.c[2].v : "";
                 let link = row.c[3] ? row.c[3].v : "";
 
-                // Fix Link: Add https:// if missing
                 if (link && !link.toString().startsWith('http')) {
                     link = 'https://' + link;
                 }
 
                 return { Area: area, SrNo: srNo, Name: name, Link: link };
-            }).filter(item => item.Area && item.Name && item.Area !== "Area"); // Filter header row if present
+            }).filter(item => item.Area && item.Name && item.Area !== "Area");
 
             populateDropdown();
         };
 
-        // 2. Populate Dropdown
         function populateDropdown() {
             const areas = [...new Set(allData.map(d => d.Area))].sort();
             const select = document.getElementById('areaSelect');
@@ -119,7 +185,6 @@
             msg.textContent = "Data loaded successfully!";
         }
 
-        // 3. Display Customers
         function displayCustomers() {
             const selectedArea = document.getElementById('areaSelect').value;
             if (!selectedArea) return;
@@ -161,12 +226,13 @@
             document.getElementById('areaModal').classList.remove('hidden');
         }
 
-        // 4. Inject the Script Tag (Triggers the data load)
-        const sheetId = '1ERYBto9SA_h1p6Yv2adpBv3r1Cr7kphm1NnevIJY0wQ'; 
-        const script = document.createElement('script');
-        // responseHandler=loadGoogleData tells Google to call our function above
-        script.src = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=responseHandler:loadGoogleData`;
-        document.body.appendChild(script);
+        // --- 3. Inject Script ---
+        function loadGoogleScript() {
+            const sheetId = '1ERYBto9SA_h1p6Yv2adpBv3r1Cr7kphm1NnevIJY0wQ'; 
+            const script = document.createElement('script');
+            script.src = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=responseHandler:loadGoogleData`;
+            document.body.appendChild(script);
+        }
 
     </script>
 </body>
