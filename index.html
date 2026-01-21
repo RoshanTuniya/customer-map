@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Locator</title>
+    
+    <meta name="theme-color" content="#007bff">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; background-color: #f4f6f9; user-select: none; }
+        
+        /* LOGIN MODAL */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; z-index: 2000;
+            backdrop-filter: blur(4px);
+        }
+        .modal-content {
+            background: white; padding: 30px; border-radius: 16px; text-align: center;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2); width: 85%; max-width: 320px;
+        }
+
+        /* LOGO */
+        #logoContainer { text-align: center; margin-top: 10px; margin-bottom: 25px; }
+        #mainLogo { max-width: 180px; max-height: 100px; height: auto; display: inline-block; }
+
+        /* INPUTS */
+        .login-input {
+            padding: 14px; font-size: 16px; width: 100%; text-align: center; 
+            margin-bottom: 12px; border: 1px solid #ddd; border-radius: 8px;
+            display: block; box-sizing: border-box; background: #fafafa;
+        }
+        .login-input:focus { border-color: #007bff; outline: none; background: #fff; }
+
+        /* MAIN APP */
+        #appContainer { display: none; max-width: 600px; margin: 0 auto; }
+        
+        select { 
+            padding: 14px; font-size: 16px; margin-top: 15px; width: 100%; 
+            border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; background: white;
+        }
+
+        button {
+            padding: 14px; font-size: 16px; width: 100%;
+            background-color: #007bff; color: white; border: none; border-radius: 8px; 
+            cursor: pointer; font-weight: 600; margin-top: 10px;
+            box-shadow: 0 4px 6px rgba(0,123,255,0.2); transition: transform 0.1s;
+        }
+        button:active { transform: scale(0.98); }
+        button:disabled { background-color: #ccc; box-shadow: none; }
+
+        /* SEARCH BOX */
+        #searchContainer { margin: 0 auto 15px auto; }
+        #searchInput {
+            width: 100%; padding: 14px; font-size: 16px; 
+            border: 2px solid #e1e4e8; border-radius: 30px; box-sizing: border-box;
+            outline: none; text-align: center; background: white;
+        }
+        #searchInput:focus { border-color: #007bff; }
+
+        /* LIST */
+        h1 { text-align: center; color: #333; margin-bottom: 5px; font-size: 22px; }
+        #customerList { list-style: none; padding: 0; margin: 0 auto; padding-bottom: 40px; }
+        
+        .customer-card {
+            background: white; margin-bottom: 12px; padding: 16px; border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06); display: flex; justify-content: space-between; align-items: center;
+            cursor: pointer; border-left: 5px solid #007bff;
+        }
+        
+        .info-group { display: flex; align-items: flex-start; flex-grow: 1; }
+        .sr-no-badge { 
+            background: #f1f3f5; color: #495057; padding: 4px 8px; border-radius: 6px; 
+            font-size: 0.85em; font-weight: bold; margin-right: 12px; min-width: 25px; text-align: center; margin-top: 2px;
+        }
+        .text-content { display: flex; flex-direction: column; }
+        .name { font-size: 17px; color: #212529; font-weight: 600; line-height: 1.3; }
+        
+        .phone-link {
+            color: #155724; font-size: 14px; text-decoration: none; margin-top: 6px; 
+            display: inline-flex; align-items: center; font-weight: 500;
+            padding: 5px 10px; background: #d4edda; border-radius: 20px; width: fit-content;
+        }
+        .map-icon { font-size: 22px; margin-left: 15px; color: #007bff; opacity: 0.8; }
+
+        .hidden { display: none !important; }
+        .change-btn {
+            display: block; width: auto; margin: 0 auto 20px auto; background: #6c757d; font-size: 14px; padding: 8px 16px;
+        }
+
+        /* BETA NOTE STYLE */
+        .beta-note {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #fff3cd;
+            border: 1px solid #ffeeba;
+            border-radius: 6px;
+            color: #856404;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="passwordModal" class="modal-overlay">
+        <div class="modal-content">
+            <h2>🔒 Login</h2>
+            <p style="color: #888; font-size: 13px; margin-bottom: 20px;">Customer Directory v3.1</p>
+            
+            <input type="text" id="userInput" class="login-input" placeholder="Username">
+            <input type="password" id="passInput" class="login-input" placeholder="Password">
+            
+            <button onclick="checkLogin()">Login</button>
+            <p id="loginError" style="color: #dc3545; display: none; margin-top: 15px; font-size: 14px;">Invalid Username or Password</p>
+
+            <div class="beta-note">
+                <strong>🚧 Beta Testing</strong><br>
+                The page is under beta testing.<br>
+                Contact <strong>Roshan Sir</strong> for any error.
+            </div>
+        </div>
+    </div>
+
+    <div id="appContainer">
+        <div id="logoContainer">
+            <img id="mainLogo" src="logo.jpeg" alt="Company Logo" onerror="fallbackLogo(this)">
+        </div>
+
+        <h1 id="pageTitle">Select Area</h1>
+        <p style="text-align:center; color:#666; font-size: 0.85em; margin-bottom: 15px;">
+            User: <strong id="currentUserDisplay">...</strong>
+        </p>
+        
+        <div id="searchContainer" class="hidden">
+            <input type="text" id="searchInput" onkeyup="handleSearch()" placeholder="🔍 Search Name...">
+        </div>
+
+        <button id="changeAreaBtn" class="change-btn hidden" onclick="showModal()">Change Area</button>
+        <ul id="customerList"></ul>
+    </div>
+
+    <div id="areaModal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h2>Select Area</h2>
+            <p id="statusMsg" style="color: #666; font-size: 0.9em;">Connecting to database...</p>
+            <select id="areaSelect" disabled>
+                <option value="">Please wait...</option>
+            </select>
+            <br><br>
+            <button id="showBtn" onclick="selectAreaAndClose()" disabled>Show Customers</button>
+        </div>
+    </div>
+
+    <script>
+        // LOGO FIX
+        let logoAttempts = 0;
+        function fallbackLogo(img) {
+            logoAttempts++;
+            if (logoAttempts === 1) img.src = 'logo.jpg';
+            else if (logoAttempts === 2) img.src = 'logo.png';
+            else if (logoAttempts === 3) img.src = 'Logo.jpeg';
+            else if (logoAttempts === 4) img.src = 'Logo.jpg';
+            else img.style.display = 'none';
+        }
+
+        // ==========================================
+        // 👥 USERS LIST
+        const USERS = {
+           "roshan": "4345",
+           "pradip": "8467",
+           "harshad": "8415",
+           "prajwal": "3272",
+           "kiran": "6710",
+           "admin": "1234"
+        };
+        // ==========================================
+
+        let allData = [];
+        let currentArea = ""; 
+
+        // --- LOGIN LOGIC ---
+        function checkLogin() {
+            const userIn = document.getElementById('userInput').value.trim().toLowerCase();
+            const passIn = document.getElementById('passInput').value.trim();
+            const errorMsg = document.getElementById('loginError');
+
+            if (USERS[userIn] && USERS[userIn] === passIn) {
+                // Success
+                document.getElementById('passwordModal').style.display = 'none';
+                document.getElementById('appContainer').style.display = 'block';
+                document.getElementById('currentUserDisplay').innerText = userIn.toUpperCase();
+                document.getElementById('areaModal').classList.remove('hidden');
+                loadGoogleScript(); 
+            } else {
+                // Failure
+                errorMsg.style.display = 'block';
+                document.getElementById('passInput').value = '';
+            }
+        }
+        document.getElementById('passInput').addEventListener("keypress", (e) => { if (e.key === "Enter") checkLogin(); });
+
+        // --- GOOGLE SHEETS DATA ---
+        window.loadGoogleData = function(json) {
+            const rows = json.table.rows;
+            if (!rows || rows.length === 0) return;
+
+            allData = rows.map(row => {
+                const area = row.c[0] ? row.c[0].v : "";
+                const srNo = row.c[1] ? row.c[1].v : "0";
+                const name = row.c[2] ? row.c[2].v : "";
+                let link = row.c[3] ? row.c[3].v : "";
+                let phone = (row.c[4]) ? row.c[4].v : ""; 
+
+                if (link && !link.toString().startsWith('http')) link = 'https://' + link;
+
+                return { Area: area, SrNo: parseInt(srNo), Name: name, Link: link, Phone: phone };
+            }).filter(item => item.Area && item.Name && item.Area !== "Area");
+
+            // Populate Dropdown
+            const areas = [...new Set(allData.map(d => d.Area))].sort();
+            const select = document.getElementById('areaSelect');
+            select.innerHTML = '<option value="" disabled selected>Choose Area</option>';
+            areas.forEach(area => {
+                const opt = document.createElement('option');
+                opt.value = area;
+                opt.textContent = area;
+                select.appendChild(opt);
+            });
+
+            select.disabled = false;
+            document.getElementById('showBtn').disabled = false;
+            document.getElementById('statusMsg').textContent = "Data Ready!";
+        };
+
+        // --- UI & SEARCH ---
+        function selectAreaAndClose() {
+            const selected = document.getElementById('areaSelect').value;
+            if (!selected) return;
+            currentArea = selected;
+            
+            document.getElementById('searchContainer').classList.remove('hidden'); 
+            document.getElementById('changeAreaBtn').classList.remove('hidden'); 
+            document.getElementById('areaModal').classList.add('hidden'); 
+            document.getElementById('pageTitle').innerText = currentArea;
+            
+            handleSearch(); // Initial Render
+        }
+
+        function handleSearch() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = allData
+                .filter(item => item.Area === currentArea && item.Name.toLowerCase().includes(query))
+                .sort((a, b) => a.SrNo - b.SrNo);
+            
+            renderList(filtered);
+        }
+
+        function renderList(data) {
+            const list = document.getElementById('customerList');
+            list.innerHTML = '';
+
+            if(data.length === 0) {
+                list.innerHTML = '<li style="text-align:center; padding:20px; color:#888;">No customers found.</li>';
+                return;
+            }
+
+            data.forEach(cust => {
+                const li = document.createElement('li');
+                li.className = 'customer-card';
+                // Click card = Open Map
+                li.onclick = (e) => { 
+                    if(e.target.tagName !== 'A') { 
+                         if(cust.Link) window.open(cust.Link, '_blank');
+                    }
+                };
+                
+                // Phone Button
+                let phoneHtml = '';
+                if (cust.Phone && String(cust.Phone).length > 3) {
+                    phoneHtml = `<a href="tel:${cust.Phone}" class="phone-link">📞 ${cust.Phone}</a>`;
+                }
+
+                li.innerHTML = `
+                    <div class="info-group">
+                        <span class="sr-no-badge">#${cust.SrNo}</span>
+                        <div class="text-content">
+                            <span class="name">${cust.Name}</span>
+                            ${phoneHtml}
+                        </div>
+                    </div>
+                    <span class="map-icon">📍</span>
+                `;
+                list.appendChild(li);
+            });
+        }
+
+        function showModal() { document.getElementById('areaModal').classList.remove('hidden'); }
+
+        function loadGoogleScript() {
+            const sheetId = '1ERYBto9SA_h1p6Yv2adpBv3r1Cr7kphm1NnevIJY0wQ'; 
+            const script = document.createElement('script');
+            // Cache Buster
+            script.src = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=responseHandler:loadGoogleData&_t=${new Date().getTime()}`;
+            document.body.appendChild(script);
+        }
+    </script>
+</body>
+</html>
